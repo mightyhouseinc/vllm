@@ -301,18 +301,14 @@ class OPTForCausalLM(nn.Module):
         kv_caches: List[KVCache],
         input_metadata: InputMetadata,
     ) -> torch.Tensor:
-        hidden_states = self.model(input_ids, positions, kv_caches,
-                                   input_metadata)
-        return hidden_states
+        return self.model(input_ids, positions, kv_caches, input_metadata)
 
     def sample(
         self,
         hidden_states: torch.Tensor,
         sampling_metadata: SamplingMetadata,
     ) -> Optional[SamplerOutput]:
-        next_tokens = self.sampler(self.lm_head_weight, hidden_states,
-                                   sampling_metadata)
-        return next_tokens
+        return self.sampler(self.lm_head_weight, hidden_states, sampling_metadata)
 
     def load_weights(self,
                      model_name_or_path: str,
@@ -331,7 +327,7 @@ class OPTForCausalLM(nn.Module):
             if "lm_head.weight" in name:
                 continue
             if name.startswith("decoder."):
-                name = "model." + name
+                name = f"model.{name}"
 
             for (param_name, weight_name, shard_id) in stacked_params_mapping:
                 if weight_name not in name:

@@ -73,11 +73,11 @@ def tensor_model_parallel_gather(input_, dst=0, dim=-1):
                              gather_list,
                              dst=dst,
                              group=get_tensor_model_parallel_group())
-    if get_tensor_model_parallel_rank() == dst:
-        output_tensor = torch.cat(gather_list, dim=dim)
-    else:
-        output_tensor = None
-    return output_tensor
+    return (
+        torch.cat(gather_list, dim=dim)
+        if get_tensor_model_parallel_rank() == dst
+        else None
+    )
 
 
 def broadcast(input_, src=0):

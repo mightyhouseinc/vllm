@@ -306,8 +306,7 @@ class FalconDecoderLayer(nn.Module):
             if mlp_bias is not None:
                 mlp_output += mlp_bias
 
-        output = mlp_output + residual
-        return output
+        return mlp_output + residual
 
 
 class FalconModel(nn.Module):
@@ -382,22 +381,19 @@ class FalconForCausalLM(nn.Module):
         kv_caches: List[KVCache],
         input_metadata: InputMetadata,
     ) -> torch.Tensor:
-        hidden_states = self.transformer(
+        return self.transformer(
             input_ids,
             positions,
             kv_caches,
             input_metadata,
         )
-        return hidden_states
 
     def sample(
         self,
         hidden_states: torch.Tensor,
         sampling_metadata: SamplingMetadata,
     ) -> Optional[SamplerOutput]:
-        next_tokens = self.sampler(self.lm_head.weight, hidden_states,
-                                   sampling_metadata)
-        return next_tokens
+        return self.sampler(self.lm_head.weight, hidden_states, sampling_metadata)
 
     def load_weights(self,
                      model_name_or_path: str,
@@ -421,8 +417,8 @@ class FalconForCausalLM(nn.Module):
             param = params_dict[name]
             if "query_key_value" in name:
                 output_dim = getattr(param, "output_dim", None)
-                loaded_weight_shape = loaded_weight.shape
                 if output_dim is not None:
+                    loaded_weight_shape = loaded_weight.shape
                     loaded_weight = loaded_weight.view(
                         loaded_weight_shape[:output_dim] +
                         (total_num_kv_heads, num_query_heads_per_kv_head + 2,
