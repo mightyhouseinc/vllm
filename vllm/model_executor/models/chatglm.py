@@ -230,9 +230,7 @@ class GLMBlock(nn.Module):
         else:
             residual = layernorm_input
 
-        output = self.mlp(layernorm_output) + residual
-
-        return output
+        return self.mlp(layernorm_output) + residual
 
 
 class GLMTransformer(nn.Module):
@@ -251,7 +249,8 @@ class GLMTransformer(nn.Module):
 
         # Transformer layers.
         self.layers = nn.ModuleList(
-            [GLMBlock(config, linear_method) for i in range(self.num_layers)])
+            [GLMBlock(config, linear_method) for _ in range(self.num_layers)]
+        )
 
         if self.post_layer_norm:
             layer_norm_func = RMSNorm if config.rmsnorm else LayerNorm
@@ -310,14 +309,12 @@ class ChatGLMModel(nn.Module):
     ) -> torch.Tensor:
         inputs_embeds = self.embedding(input_ids)
 
-        # Run encoder.
-        hidden_states = self.encoder(
+        return self.encoder(
             hidden_states=inputs_embeds,
             position_ids=position_ids,
             kv_caches=kv_caches,
             input_metadata=input_metadata,
         )
-        return hidden_states
 
 
 class ChatGLMForCausalLM(nn.Module):
@@ -341,18 +338,14 @@ class ChatGLMForCausalLM(nn.Module):
         kv_caches: List[KVCache],
         input_metadata: InputMetadata,
     ) -> torch.Tensor:
-        hidden_states = self.transformer(input_ids, positions, kv_caches,
-                                         input_metadata)
-        return hidden_states
+        return self.transformer(input_ids, positions, kv_caches, input_metadata)
 
     def sample(
         self,
         hidden_states: torch.Tensor,
         sampling_metadata: SamplingMetadata,
     ) -> Optional[SamplerOutput]:
-        next_tokens = self.sampler(self.lm_head_weight, hidden_states,
-                                   sampling_metadata)
-        return next_tokens
+        return self.sampler(self.lm_head_weight, hidden_states, sampling_metadata)
 
     def load_weights(self,
                      model_name_or_path: str,

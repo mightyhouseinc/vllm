@@ -42,7 +42,7 @@ class PagedAttention(nn.Module):
         super().__init__()
         self.num_heads = num_heads
         self.head_size = head_size
-        self.scale = float(scale)
+        self.scale = scale
         self.num_kv_heads = num_heads if num_kv_heads is None else num_kv_heads
         self.sliding_window = sliding_window
         if alibi_slopes is not None:
@@ -154,23 +154,21 @@ class PagedAttention(nn.Module):
                 (is_hip()) else None,
             )
             output = out.view_as(query)
-        else:
-            # Decoding run.
-            if key_cache is not None and value_cache is not None:
-                output = _paged_attention(
-                    query,
-                    key_cache,
-                    value_cache,
-                    input_metadata,
-                    self.num_kv_heads,
-                    self.scale,
-                    self.alibi_slopes,
-                )
-            else:
-                # This happens during the initial memory profiling run for
-                # CUDA graphs.
-                output = torch.zeros_like(query)
+        elif key_cache is None or value_cache is None:
+            # This happens during the initial memory profiling run for
+            # CUDA graphs.
+            output = torch.zeros_like(query)
 
+        else:
+            output = _paged_attention(
+                query,
+                key_cache,
+                value_cache,
+                input_metadata,
+                self.num_kv_heads,
+                self.scale,
+                self.alibi_slopes,
+            )
         # Reshape the output tensor.
         return output.view(batch_size, seq_len, hidden_size)
 
@@ -205,8 +203,7 @@ def _make_alibi_bias(
     bias.mul_(alibi_slopes[:, None, None])
     if num_heads != num_kv_heads:
         bias = bias.unflatten(1, (num_kv_heads, num_heads // num_kv_heads))
-    attn_bias = LowerTriangularMaskWithTensorBias(bias)
-    return attn_bias
+    return LowerTriangularMaskWithTensorBias(bias)
 
 
 def _paged_attention(

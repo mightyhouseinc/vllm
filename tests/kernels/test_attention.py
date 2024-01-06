@@ -24,7 +24,7 @@ HEAD_SIZES = [64, 80, 96, 112, 128, 256]
 BLOCK_SIZES = [16, 32]
 USE_ALIBI = [False, True]
 SEEDS = [0]
-DEVICES = [i for i in range(1 if torch.cuda.device_count() == 1 else 2)]
+DEVICES = list(range(1 if torch.cuda.device_count() == 1 else 2))
 
 
 def ref_masked_attention(
@@ -38,8 +38,7 @@ def ref_masked_attention(
     if attn_mask is not None:
         attn_weights = attn_weights + attn_mask.float()
     attn_weights = torch.softmax(attn_weights, dim=-1).to(value.dtype)
-    out = torch.einsum("hqk,khd->qhd", attn_weights, value)
-    return out
+    return torch.einsum("hqk,khd->qhd", attn_weights, value)
 
 
 def ref_single_query_cached_kv_attention(
@@ -321,8 +320,7 @@ def test_multi_query_kv_attention(
     output = output.squeeze(0)
 
     cu_seq_lens = [0]
-    for seq_len in seq_lens:
-        cu_seq_lens.append(cu_seq_lens[-1] + seq_len)
+    cu_seq_lens.extend(cu_seq_lens[-1] + seq_len for seq_len in seq_lens)
     ref_output = ref_multi_query_kv_attention(
         cu_seq_lens,
         query,

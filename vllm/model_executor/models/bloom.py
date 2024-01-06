@@ -208,9 +208,7 @@ class BloomBlock(nn.Module):
         else:
             residual = attention_output
 
-        # MLP.
-        output = self.mlp(layernorm_output) + residual
-        return output
+        return self.mlp(layernorm_output) + residual
 
 
 class BloomModel(nn.Module):
@@ -282,18 +280,14 @@ class BloomForCausalLM(nn.Module):
         kv_caches: List[KVCache],
         input_metadata: InputMetadata,
     ) -> torch.Tensor:
-        hidden_states = self.transformer(input_ids, positions, kv_caches,
-                                         input_metadata)
-        return hidden_states
+        return self.transformer(input_ids, positions, kv_caches, input_metadata)
 
     def sample(
         self,
         hidden_states: torch.Tensor,
         sampling_metadata: SamplingMetadata,
     ) -> Optional[SamplerOutput]:
-        next_tokens = self.sampler(self.lm_head_weight, hidden_states,
-                                   sampling_metadata)
-        return next_tokens
+        return self.sampler(self.lm_head_weight, hidden_states, sampling_metadata)
 
     def load_weights(self,
                      model_name_or_path: str,
@@ -306,7 +300,7 @@ class BloomForCausalLM(nn.Module):
             if name == "lm_head.weight":
                 continue
             if not name.startswith("transformer."):
-                name = "transformer." + name
+                name = f"transformer.{name}"
             param = params_dict[name]
 
             if "query_key_value" in name:
